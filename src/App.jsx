@@ -1,12 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-import { v4 as uuidv4 } from 'uuid'
+import { supabase } from './supabaseClient'
 import './App.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
-function App() {
+export default function App({ session, onLogout }) {
   const [records, setRecords] = useState([])
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -20,30 +20,94 @@ function App() {
     stress: 50
   })
 
+  // Fetch records from Supabase
+  useEffect(() => {
+    const fetchRecords = async () => {
+      const { data, error } = await supabase
+        .from('health_records')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('date', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching records:', error)
+      } else {
+        setRecords(data || [])
+      }
+    }
+
+    if (session) {
+      fetchRecords()
+    }
+  }, [session])
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: name === 'foodType' ? value : Number(value)
+    }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const newRecord = { ...formData, id: uuidv4() }
-    setRecords([...records, newRecord])
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      weight: '',
-      sleep: '',
-      sport: '',
-      water: '',
-      foodType: 'balanced',
-      energy: 50,
-      mood: 50,
-      stress: 50
-    })
+    
+    // Validate required fields
+    if (!formData.date || !formData.weight || !formData.sleep) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    try {
+      const newRecord = { 
+        ...formData,
+        user_id: session.user.id,
+        created_at: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from('health_records')
+        .insert([newRecord])
+        .select()
+
+      if (error) throw error
+
+      // Update local state with new record
+      setRecords(prevRecords => [...prevRecords, data[0]])
+      
+      // Reset form
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        weight: '',
+        sleep: '',
+        sport: '',
+        water: '',
+        foodType: 'balanced',
+        energy: 50,
+        mood: 50,
+        stress: 50
+      })
+
+    } catch (error) {
+      console.error('Error adding record:', error)
+      alert('Failed to add record: ' + error.message)
+    }
   }
 
-  const handleDelete = (id) => {
-    setRecords(records.filter(record => record.id !== id))
+  const handleDelete = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('health_records')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      setRecords(prevRecords => prevRecords.filter(record => record.id !== id))
+    } catch (error) {
+      console.error('Error deleting record:', error)
+      alert('Failed to delete record: ' + error.message)
+    }
   }
 
   const chartData = {
@@ -52,43 +116,43 @@ function App() {
       {
         label: 'Weight (kg)',
         data: records.map(record => record.weight),
-        borderColor: '#1db954', // Green
+        borderColor: '#1db954',
         backgroundColor: '#1db95450'
       },
       {
         label: 'Sleep (hours)',
         data: records.map(record => record.sleep),
-        borderColor: '#ff0000', // Red
+        borderColor: '#ff0000',
         backgroundColor: '#ff000050'
       },
       {
         label: 'Energy Level',
         data: records.map(record => record.energy),
-        borderColor: '#0000ff', // Blue
+        borderColor: '#0000ff',
         backgroundColor: '#0000ff50'
       },
       {
         label: 'Mood',
         data: records.map(record => record.mood),
-        borderColor: '#ffff00', // Yellow
+        borderColor: '#ffff00',
         backgroundColor: '#ffff0050'
       },
       {
         label: 'Sport (minutes)',
         data: records.map(record => record.sport),
-        borderColor: '#ee82ee', // Violet
+        borderColor: '#ee82ee',
         backgroundColor: '#ee82ee50'
       },
       {
         label: 'Stress Level',
         data: records.map(record => record.stress),
-        borderColor: '#ffa500', // Orange
+        borderColor: '#ffa500',
         backgroundColor: '#ffa50050'
       },
       {
         label: 'Water (liters)',
         data: records.map(record => record.water),
-        borderColor: '#ffffff', // White
+        borderColor: '#ffffff',
         backgroundColor: '#ffffff50'
       }
     ]
@@ -96,6 +160,7 @@ function App() {
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     scales: {
       x: {
         ticks: {
@@ -125,31 +190,77 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Healthy Track</h1>
+      <div className="app-header">
+        <h1>Healthy Track</h1>
+        <button onClick={onLogout} className="logout-button">
+          Logout
+        </button>
+      </div>
+      
       <form onSubmit={handleSubmit} className="track-form">
         <div className="form-group">
           <label>Date:</label>
-          <input type="date" name="date" value={formData.date} onChange={handleInputChange} required />
+          <input 
+            type="date" 
+            name="date" 
+            value={formData.date} 
+            onChange={handleInputChange} 
+            required 
+          />
         </div>
+
         <div className="form-group">
           <label>Weight (kg):</label>
-          <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} step="0.1" required />
+          <input 
+            type="number" 
+            name="weight" 
+            value={formData.weight} 
+            onChange={handleInputChange} 
+            step="0.1" 
+            required 
+          />
         </div>
+
         <div className="form-group">
           <label>Sleep (hours):</label>
-          <input type="number" name="sleep" value={formData.sleep} onChange={handleInputChange} step="0.1" required />
+          <input 
+            type="number" 
+            name="sleep" 
+            value={formData.sleep} 
+            onChange={handleInputChange} 
+            step="0.1" 
+            required 
+          />
         </div>
+
         <div className="form-group">
           <label>Sport (minutes):</label>
-          <input type="number" name="sport" value={formData.sport} onChange={handleInputChange} />
+          <input 
+            type="number" 
+            name="sport" 
+            value={formData.sport} 
+            onChange={handleInputChange} 
+          />
         </div>
+
         <div className="form-group">
           <label>Water (liters):</label>
-          <input type="number" name="water" value={formData.water} onChange={handleInputChange} step="0.1" />
+          <input 
+            type="number" 
+            name="water" 
+            value={formData.water} 
+            onChange={handleInputChange} 
+            step="0.1" 
+          />
         </div>
+
         <div className="form-group">
           <label>Food Type:</label>
-          <select name="foodType" value={formData.foodType} onChange={handleInputChange}>
+          <select 
+            name="foodType" 
+            value={formData.foodType} 
+            onChange={handleInputChange}
+          >
             <option value="balanced">Balanced</option>
             <option value="vegetarian">Vegetarian</option>
             <option value="vegan">Vegan</option>
@@ -161,15 +272,36 @@ function App() {
         <div className="range-inputs">
           <div className="form-group">
             <label>Energy Level (1-100): {formData.energy}</label>
-            <input type="range" name="energy" min="1" max="100" value={formData.energy} onChange={handleInputChange} />
+            <input 
+              type="range" 
+              name="energy" 
+              min="1" 
+              max="100" 
+              value={formData.energy} 
+              onChange={handleInputChange} 
+            />
           </div>
           <div className="form-group">
             <label>Mood (1-100): {formData.mood}</label>
-            <input type="range" name="mood" min="1" max="100" value={formData.mood} onChange={handleInputChange} />
+            <input 
+              type="range" 
+              name="mood" 
+              min="1" 
+              max="100" 
+              value={formData.mood} 
+              onChange={handleInputChange} 
+            />
           </div>
           <div className="form-group">
             <label>Stress Level (1-100): {formData.stress}</label>
-            <input type="range" name="stress" min="1" max="100" value={formData.stress} onChange={handleInputChange} />
+            <input 
+              type="range" 
+              name="stress" 
+              min="1" 
+              max="100" 
+              value={formData.stress} 
+              onChange={handleInputChange} 
+            />
           </div>
         </div>
 
@@ -220,5 +352,3 @@ function App() {
     </div>
   )
 }
-
-export default App

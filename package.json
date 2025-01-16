@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "@supabase/supabase-js": "^2.47.14",
     "chart.js": "^4.4.0",
+    "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
