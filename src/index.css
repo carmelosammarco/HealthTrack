@@ -39,7 +39,7 @@ body {
 .logout-button {
   background-color: var(--spotify-green);
   color: var(--spotify-black);
-  padding: 8px 16px;
+  padding: 12px 20px;
   border: none;
   border-radius: 20px;
   cursor: pointer;
@@ -71,7 +71,7 @@ body {
 
 input, select, button {
   width: 100%;
-  padding: 10px;
+  padding: 1px;
   border-radius: 4px;
   border: 1px solid var(--spotify-light-gray);
   background-color: var(--spotify-black);
@@ -136,14 +136,15 @@ button[type="submit"]:hover {
   border-radius: 8px;
   margin-bottom: 30px;
 	
-	height: 600px;
+	height: 500px;
 }
 
 .records-table {
   background-color: var(--spotify-dark-gray);
-  padding: 20px;
-  border-radius: 8px;
-  overflow-x: auto;
+  padding: 1px;
+  border-radius: 1px;
+	overflow-x: auto;
+  
 }
 
 table {
@@ -185,7 +186,7 @@ button:hover {
 
 @media (max-width: 768px) {
   .container {
-    padding: 10px;
+    padding: 5px;
   }
   
   .app-header {
@@ -195,10 +196,27 @@ button:hover {
   }
   
   .track-form {
-    padding: 15px;
+    padding: 25px;
   }
   
   table {
-    font-size: 14px;
+    font-size: 10px;
+		align-items: center;
+		
   }
+
+	button  {
+	background-color: var(--spotify-green);
+  color: var(--spotify-black);
+  border: none;
+  padding: 5px 1px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+	
+	font-weight: bold;
+	font-size: 12px;
+	align-items: center;
+		
+	}
 }
