@@ -9,7 +9,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 export default function App({ session, onLogout }) {
   const [records, setRecords] = useState([])
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: '',
     weight: '',
     sleep: '',
     sport: '',
@@ -19,6 +19,12 @@ export default function App({ session, onLogout }) {
     mood: 50,
     stress: 50
   })
+
+  // Set initial date when component mounts
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    setFormData(prev => ({ ...prev, date: today }))
+  }, [])
 
   // Fetch records from Supabase
   useEffect(() => {
@@ -43,9 +49,11 @@ export default function App({ session, onLogout }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: name === 'foodType' ? value : Number(value)
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'date' ? value : 
+              name === 'foodType' ? value : 
+              Number(value)
     }))
   }
 
@@ -203,7 +211,7 @@ export default function App({ session, onLogout }) {
           <input 
             type="date" 
             name="date" 
-            value={formData.date} 
+            value={formData.date || ''}
             onChange={handleInputChange} 
             required 
           />
